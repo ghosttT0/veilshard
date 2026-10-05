@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/veilshard/veilshard/internal/exporter/qr"
 	"github.com/veilshard/veilshard/internal/exporter/sub"
 	"github.com/veilshard/veilshard/internal/exporter/uri"
+	"github.com/veilshard/veilshard/internal/firewall/ufw"
 )
 
 func runExport(args []string) error {
@@ -85,8 +87,12 @@ func runExport(args []string) error {
 		}
 
 		subURL := fmt.Sprintf("http://%s:%d/sub/%s", expCtx.ServerIP, *port, tokenVal)
-		ui.Header("vpnctl Subscription Server")
+		ui.Header("veilshard Subscription Server")
 		ui.Success("Subscription server running!")
+
+		// Automatically ensure firewall port is open
+		_ = ufw.New().AllowProxyPort(context.Background(), *port, "tcp")
+
 		fmt.Printf("\n%sYour Universal Subscription URL:%s\n%s%s%s\n\n", ColorBold, ColorReset, ColorCyan, subURL, ColorReset)
 		fmt.Printf("• %sClash / Mihomo / Clash Verge%s: Automatically receives complete YAML config with routing rules\n", ColorBold, ColorReset)
 		fmt.Printf("• %sShadowrocket / v2rayN / sing-box%s: Automatically receives Base64 node list\n\n", ColorBold, ColorReset)
