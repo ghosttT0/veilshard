@@ -51,7 +51,7 @@ func (m *Manager) CreateSystemUser(ctx context.Context, username string) error {
 
 	// Create system user with primary group
 	cmd := exec.CommandContext(ctx, "useradd", "-r", "-g", username, "-s", "/usr/sbin/nologin", "-M", "-d", "/nonexistent", username)
-	out, err := cmd.CombinedOutput()
+	_, err := cmd.CombinedOutput()
 	if err != nil {
 		// Fallback without -g
 		cmdFallback := exec.CommandContext(ctx, "useradd", "-r", "-s", "/usr/sbin/nologin", "-M", "-d", "/nonexistent", username)
