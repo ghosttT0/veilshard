@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/veilshard/veilshard/internal/exporter"
-	"github.com/veilshard/veilshard/internal/exporter/mihomo"
 	"github.com/veilshard/veilshard/internal/installer"
 )
 
@@ -50,18 +50,26 @@ func runInstall(args []string) error {
 
 	fmt.Println("\nInstallation complete.")
 
-	// Export Mihomo snippet
+	// Load subscription token and URL
+	tokenPath := "/etc/vpnctl/sub_token"
+	tokenVal := ""
+	if data, err := os.ReadFile(tokenPath); err == nil {
+		tokenVal = strings.TrimSpace(string(data))
+	}
+
 	expCtx, err := exporter.LoadExportContext("")
 	if err == nil && expCtx != nil {
-		ui.Section("Client Configuration (Mihomo / Clash Meta)")
-		fmt.Println(mihomo.GenerateYAML(expCtx))
+		subURL := fmt.Sprintf("http://%s:8080/sub/%s", expCtx.ServerIP, tokenVal)
+		ui.Section("Universal Subscription Link (One-Click Import)")
+		fmt.Printf("\n%sYour Ready-to-Use Subscription URL:%s\n%s%s%s\n\n", ColorBold, ColorReset, ColorCyan, subURL, ColorReset)
+		fmt.Printf("• %sClash Verge / Mihomo%s: Directly paste this URL into New Subscription and Save!\n", ColorBold, ColorReset)
+		fmt.Printf("• %sShadowrocket / v2rayN%s: Directly scan or paste this URL to sync nodes!\n\n", ColorBold, ColorReset)
 		ui.Divider()
 		fmt.Printf("Tips:\n")
-		fmt.Printf("• Export Mihomo config again: %svpnctl export mihomo%s\n", ColorCyan, ColorReset)
-		fmt.Printf("• Export Share URI:          %svpnctl export uri%s\n", ColorCyan, ColorReset)
-		fmt.Printf("• Export Terminal QR code:    %svpnctl export qr%s\n", ColorCyan, ColorReset)
-		fmt.Printf("• Check system status:        %svpnctl status%s\n", ColorCyan, ColorReset)
-		fmt.Printf("• Run diagnostics:            %svpnctl doctor%s\n\n", ColorCyan, ColorReset)
+		fmt.Printf("• Export Full Profile YAML:   %sveilshard export profile%s\n", ColorCyan, ColorReset)
+		fmt.Printf("• Export Share URI:           %sveilshard export uri%s\n", ColorCyan, ColorReset)
+		fmt.Printf("• Check system status:        %sveilshard status%s\n", ColorCyan, ColorReset)
+		fmt.Printf("• Run diagnostics:            %sveilshard doctor%s\n\n", ColorCyan, ColorReset)
 	}
 
 	return nil

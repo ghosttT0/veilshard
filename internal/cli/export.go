@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -102,8 +103,9 @@ func runExport(args []string) error {
 		ui.Header("veilshard Subscription Server")
 		ui.Success("Subscription server running with 256-bit anti-bruteforce encryption!")
 
-		// Automatically ensure firewall port is open
+		// Automatically ensure firewall port is open in both UFW and iptables
 		_ = ufw.New().AllowProxyPort(context.Background(), *port, "tcp")
+		_ = exec.Command("iptables", "-I", "INPUT", "-p", "tcp", "--dport", fmt.Sprintf("%d", *port), "-j", "ACCEPT").Run()
 
 		fmt.Printf("\n%sYour Cryptographically Hardened Subscription URL:%s\n%s%s%s\n\n", ColorBold, ColorReset, ColorCyan, subURL, ColorReset)
 		fmt.Printf("• %sToken Entropy%s: 256-bit CSPRNG (64-character hex, uncrackable)\n", ColorBold, ColorReset)

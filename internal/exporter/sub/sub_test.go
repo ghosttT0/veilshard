@@ -49,6 +49,9 @@ func TestSubscriptionGenerators(t *testing.T) {
 	if !strings.Contains(profile, "gateway.icloud.com") {
 		t.Fatalf("clash profile missing SNI")
 	}
+	if !strings.Contains(profile, "flow: xtls-rprx-vision") {
+		t.Fatalf("clash profile missing flow: xtls-rprx-vision")
+	}
 
 	// 3. Test HTTP Subscription handler
 	reqClash := httptest.NewRequest("GET", "/sub/token", nil)

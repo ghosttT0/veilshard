@@ -3,12 +3,35 @@ package exporter
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/veilshard/veilshard/internal/config"
 	"github.com/veilshard/veilshard/internal/credentials"
+	"github.com/veilshard/veilshard/internal/state"
 	"github.com/veilshard/veilshard/internal/users"
 )
+
+func autoDetectPublicIPv4() string {
+	client := &http.Client{Timeout: 3 * time.Second}
+	endpoints := []string{"https://api.ipify.org", "https://icanhazip.com", "https://ifconfig.me/ip", "https://ip.sb"}
+	for _, ep := range endpoints {
+		resp, err := client.Get(ep)
+		if err == nil {
+			data, _ := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			ipStr := strings.TrimSpace(string(data))
+			if ip := net.ParseIP(ipStr); ip != nil && ip.To4() != nil {
+				return ip.String()
+			}
+		}
+	}
+	return ""
+}
 
 // ExportContext holds all metadata needed to produce client configs.
 type ExportContext struct {
@@ -62,8 +85,16 @@ func LoadExportContext(username string) (*ExportContext, error) {
 	}
 
 	serverIP := cfg.Server.PublicIP
+	if serverIP == "" || serverIP == "YOUR_SERVER_IP" {
+		if st, err := state.Load(""); err == nil && st.PublicIPv4 != "" {
+			serverIP = st.PublicIPv4
+		}
+	}
+	if serverIP == "" || serverIP == "YOUR_SERVER_IP" {
+		serverIP = autoDetectPublicIPv4()
+	}
 	if serverIP == "" {
-		serverIP = "YOUR_SERVER_IP"
+		serverIP = "127.0.0.1"
 	}
 
 	nodeName := fmt.Sprintf("vpnctl-%s", userName)

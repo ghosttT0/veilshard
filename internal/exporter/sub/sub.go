@@ -97,15 +97,15 @@ func StartSubscriptionServer(addr string, token string, ctx *exporter.ExportCont
 	mux := http.NewServeMux()
 
 	path := fmt.Sprintf("/sub/%s", token)
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		userAgent := strings.ToLower(r.UserAgent())
 		platform := "desktop"
 		if strings.Contains(userAgent, "iphone") || strings.Contains(userAgent, "ipad") || strings.Contains(userAgent, "shadowrocket") {
 			platform = "ios"
 		}
 
-		// If requester is Clash / Mihomo / ClashVerge
-		if strings.Contains(userAgent, "clash") || strings.Contains(userAgent, "mihomo") || r.URL.Query().Get("type") == "clash" {
+		// If requester is Clash / Mihomo / ClashVerge or requests YAML
+		if strings.Contains(userAgent, "clash") || strings.Contains(userAgent, "mihomo") || r.URL.Query().Get("type") == "clash" || strings.HasSuffix(r.URL.Path, ".yaml") || strings.HasSuffix(r.URL.Path, "/clash") {
 			w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
 			w.Header().Set("Subscription-Userinfo", "upload=0; download=0; total=107374182400; expire=0")
 			w.WriteHeader(http.StatusOK)
@@ -118,7 +118,11 @@ func StartSubscriptionServer(addr string, token string, ctx *exporter.ExportCont
 		w.Header().Set("Subscription-Userinfo", "upload=0; download=0; total=107374182400; expire=0")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(GenerateBase64Subscription(ctx)))
-	})
+	}
+
+	mux.HandleFunc(path, handler)
+	mux.HandleFunc(path+"/clash.yaml", handler)
+	mux.HandleFunc(path+"/clash", handler)
 
 	// Anti-probing tarpit for any unauthorized / invalid paths:
 	// Slow down brute-force scanners by delaying response by 3 seconds

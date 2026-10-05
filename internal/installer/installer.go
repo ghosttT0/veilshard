@@ -2,11 +2,14 @@ package installer
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -363,6 +366,39 @@ func (in *Installer) Install(ctx context.Context, opts Options, ui UIProgress) e
 	}
 	if ui != nil {
 		ui.Step(fmt.Sprintf("TCP/%d listening", targetPort), true, "")
+	}
+
+	// Ensure token exists
+	tokenPath := "/etc/vpnctl/sub_token"
+	if _, err := os.Stat(tokenPath); err != nil {
+		b := make([]byte, 32)
+		_, _ = rand.Read(b)
+		tokenVal := hex.EncodeToString(b)
+		_ = os.WriteFile(tokenPath, []byte(tokenVal), 0600)
+	}
+
+	// Install and start permanent background subscription server (port 8080)
+	subUnitPath := "/etc/systemd/system/veilshard-sub.service"
+	subUnitContent := `[Unit]
+Description=Veilshard Universal HTTP Subscription Server
+After=network.target network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/veilshard export serve -port 8080
+Restart=always
+RestartSec=3s
+
+[Install]
+WantedBy=multi-user.target
+`
+	_ = os.WriteFile(subUnitPath, []byte(subUnitContent), 0644)
+	_ = exec.CommandContext(ctx, "systemctl", "daemon-reload").Run()
+	_ = exec.CommandContext(ctx, "systemctl", "enable", "--now", "veilshard-sub").Run()
+	_ = in.firewall.AllowProxyPort(ctx, 8080, "tcp")
+	_ = exec.CommandContext(ctx, "iptables", "-I", "INPUT", "-p", "tcp", "--dport", "8080", "-j", "ACCEPT").Run()
+	if ui != nil {
+		ui.Step("Subscription service active", true, "veilshard-sub (background daemon on :8080)")
 	}
 
 	// Commit state
