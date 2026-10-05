@@ -121,7 +121,7 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 		Log: LogConfig{
 			LogLevel: "none",
 			Access:   "none",
-			Error:    "/var/log/vpnctl/error.log",
+			Error:    "",
 		},
 		Inbounds: []InboundConfig{
 			{
@@ -157,12 +157,13 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 	}
 }
 
-// WriteConfigFile serializes the configuration and sets secure permissions (0640, vpnctl-proxy).
+// WriteConfigFile serializes the configuration and sets secure permissions (0644, vpnctl-proxy).
 func WriteConfigFile(targetPath string, xc *XrayConfig, runAsUser string) error {
 	dir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("mkdir %s: %w", dir, err)
 	}
+	_ = os.Chmod(dir, 0755)
 
 	data, err := json.MarshalIndent(xc, "", "  ")
 	if err != nil {
@@ -170,7 +171,7 @@ func WriteConfigFile(targetPath string, xc *XrayConfig, runAsUser string) error 
 	}
 
 	tmpFile := fmt.Sprintf("%s.tmp.%d", targetPath, os.Getpid())
-	if err := os.WriteFile(tmpFile, data, 0640); err != nil {
+	if err := os.WriteFile(tmpFile, data, 0644); err != nil {
 		return fmt.Errorf("write tmp xray config: %w", err)
 	}
 
@@ -179,10 +180,11 @@ func WriteConfigFile(targetPath string, xc *XrayConfig, runAsUser string) error 
 		return fmt.Errorf("atomic rename xray config: %w", err)
 	}
 
-	// Change ownership so non-root runner can read config
+	_ = os.Chmod(targetPath, 0644)
+
+	// Change ownership if possible
 	if runAsUser != "" && runAsUser != "root" {
-		_ = exec.Command("chown", fmt.Sprintf("root:%s", runAsUser), targetPath).Run()
-		_ = exec.Command("chmod", "0640", targetPath).Run()
+		_ = exec.Command("chown", fmt.Sprintf("%s:%s", runAsUser, runAsUser), targetPath).Run()
 	}
 
 	return nil

@@ -227,7 +227,8 @@ func (in *Installer) Install(ctx context.Context, opts Options, ui UIProgress) e
 
 	// Write credentials file
 	credsPath := "/etc/vpnctl/credentials.json"
-	_ = os.MkdirAll(filepath.Dir(credsPath), 0700)
+	_ = os.MkdirAll(filepath.Dir(credsPath), 0755)
+	_ = os.Chmod(filepath.Dir(credsPath), 0755)
 	credsData, _ := json.MarshalIndent(creds, "", "  ")
 	_ = os.WriteFile(credsPath, credsData, 0600)
 	in.rb.Push("Remove credentials file", func(ctx context.Context) error {
@@ -321,19 +322,34 @@ func (in *Installer) Install(ctx context.Context, opts Options, ui UIProgress) e
 	// Start service
 	err = in.service.Start(ctx)
 	if err != nil {
+		logs, _ := in.service.GetLogs(ctx, 25)
 		in.triggerRollback(ctx, ui)
-		return fmt.Errorf("start service: %w", err)
+		return fmt.Errorf("start service: %w\nRecent systemd logs:\n%s", err, logs)
 	}
 	in.rb.Push("Stop service", func(ctx context.Context) error {
 		return in.service.Stop(ctx)
 	})
 
-	time.Sleep(1 * time.Second)
+	// Wait up to 5 seconds for service to stabilize into active state
+	var svcStatus *service.Status
+	active := false
+	for i := 0; i < 10; i++ {
+		time.Sleep(500 * time.Millisecond)
+		svcStatus, err = in.service.Status(ctx)
+		if err == nil && svcStatus != nil && svcStatus.Active {
+			active = true
+			break
+		}
+	}
 
-	svcStatus, err := in.service.Status(ctx)
-	if err != nil || !svcStatus.Active {
+	if !active {
+		logs, _ := in.service.GetLogs(ctx, 30)
 		in.triggerRollback(ctx, ui)
-		return fmt.Errorf("service failed to stay active: %v", err)
+		subState := ""
+		if svcStatus != nil {
+			subState = fmt.Sprintf(" (substate: %s)", svcStatus.SubState)
+		}
+		return fmt.Errorf("service failed to stay active%s\n--- Recent journalctl logs ---\n%s", subState, logs)
 	}
 	if ui != nil {
 		ui.Step("Service running", true, fmt.Sprintf("PID %d", svcStatus.PID))
