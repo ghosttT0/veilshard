@@ -78,7 +78,7 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 		if u.Enabled {
 			clients = append(clients, ClientConfig{
 				ID:    u.UUID,
-				Flow:  "",
+				Flow:  "xtls-rprx-vision",
 				Email: u.Name,
 			})
 		}
@@ -88,7 +88,7 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 	if len(clients) == 0 && creds.UUID != "" {
 		clients = append(clients, ClientConfig{
 			ID:    creds.UUID,
-			Flow:  "",
+			Flow:  "xtls-rprx-vision",
 			Email: "default",
 		})
 	}
@@ -119,8 +119,8 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 
 	return &XrayConfig{
 		Log: LogConfig{
-			LogLevel: "none",
-			Access:   "none",
+			LogLevel: "warning",
+			Access:   "",
 			Error:    "",
 		},
 		Inbounds: []InboundConfig{

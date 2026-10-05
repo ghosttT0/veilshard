@@ -17,6 +17,7 @@ func GenerateURI(ctx *exporter.ExportContext) string {
 	q.Set("fp", "chrome")
 	q.Set("sni", ctx.ServerName)
 	q.Set("sid", ctx.ShortID)
+	q.Set("flow", "xtls-rprx-vision")
 	q.Set("encryption", "none")
 	q.Set("headerType", "none")
 

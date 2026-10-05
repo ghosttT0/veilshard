@@ -61,7 +61,7 @@ func GenerateFullClashProfile(ctx *exporter.ExportContext, platform ...string) s
 	sb.WriteString("    network: tcp\n")
 	sb.WriteString("    tls: true\n")
 	sb.WriteString("    udp: true\n")
-	sb.WriteString("    flow: \"\"\n")
+	sb.WriteString("    flow: xtls-rprx-vision\n")
 	sb.WriteString(fmt.Sprintf("    servername: \"%s\"\n", ctx.ServerName))
 	sb.WriteString(fmt.Sprintf("    client-fingerprint: %s\n", fp))
 	sb.WriteString("    reality-opts:\n")
