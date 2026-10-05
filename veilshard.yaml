@@ -1,0 +1,27 @@
+# Veilshard (隐纱之核) Declarative Fleet & Transit Mesh Configuration
+version: "1"
+
+nodes:
+  # 1. Low-latency transit / relay node (Hong Kong BGP)
+  - name: "hk-transit"
+    role: relay
+    host: "103.200.1.5"
+    listen_port: 8443
+    target: "us-exit" # Transparent L4 forwarding to us-exit
+    ssh: { user: "root", port: 22, key: "~/.ssh/id_ed25519" }
+
+  # 2. High-bandwidth exit node (US West REALITY Core)
+  - name: "us-exit"
+    role: exit
+    host: "198.51.100.2"
+    port: 443
+    protocol: vless-reality
+    sni_target: "auto" # 自动并发测试并选择延迟最低的合规大厂 (Apple/Microsoft/Cloudflare/AWS)
+    monthly_quota: "800GB" # 零数据库内核流量配额与 98% 突发熔断
+    ssh: { user: "root", port: 22, key: "~/.ssh/id_ed25519" }
+
+output:
+  clash_meta: "./dist/clash.yaml"
+  sing_box: "./dist/sing-box.json"
+  platform: "auto" # 针对 iOS (Safari/uTLS) 或桌面端 (Chrome) 自动对齐指纹
+  subscription_url: ""
