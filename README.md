@@ -1,7 +1,7 @@
 # Veilshard (隐纱之核)
 
 <p align="center">
-  <img src="./assets/banner.png" alt="Veilshard Banner" width="820" onerror="this.src='./assets/banner.svg'"/>
+  <img src="./assets/banner.jpg" alt="Veilshard Banner" width="820" onerror="this.src='./assets/banner.svg'"/>
 </p>
 
 <p align="center">
