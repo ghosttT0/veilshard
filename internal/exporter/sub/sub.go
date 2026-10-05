@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/veilshard/veilshard/internal/exporter"
 	"github.com/veilshard/veilshard/internal/exporter/uri"
@@ -117,6 +118,13 @@ func StartSubscriptionServer(addr string, token string, ctx *exporter.ExportCont
 		w.Header().Set("Subscription-Userinfo", "upload=0; download=0; total=107374182400; expire=0")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(GenerateBase64Subscription(ctx)))
+	})
+
+	// Anti-probing tarpit for any unauthorized / invalid paths:
+	// Slow down brute-force scanners by delaying response by 3 seconds
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(3 * time.Second)
+		http.NotFound(w, r)
 	})
 
 	return http.ListenAndServe(addr, mux)
