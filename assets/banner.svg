@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d0f18" />
+      <stop offset="50%" stop-color="#08090e" />
+      <stop offset="100%" stop-color="#040508" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur1" />
+      <feGaussianBlur stdDeviation="18" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Text Stroke Gradient -->
+    <linearGradient id="neonTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38ef7d" />
+      <stop offset="25%" stop-color="#00f2fe" />
+      <stop offset="65%" stop-color="#9d50bb" />
+      <stop offset="100%" stop-color="#f77062" />
+    </linearGradient>
+
+    <!-- Shard Internal Gradient -->
+    <linearGradient id="crystalGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#7f00ff" stop-opacity="0.9" />
+    </linearGradient>
+    <linearGradient id="crystalGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e100ff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#0072ff" stop-opacity="0.7" />
+    </linearGradient>
+    <linearGradient id="darkFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e2230" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0d1017" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Ring Gradient -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.4" />
+      <stop offset="50%" stop-color="#9d50bb" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="squircleBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b4252" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#1a1c23" stop-opacity="0.8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep Canvas -->
+  <rect width="1000" height="480" rx="20" fill="url(#bgGrad)" />
+
+  <!-- Ambient Backdrop Glow -->
+  <circle cx="240" cy="240" r="160" fill="#00f2fe" opacity="0.08" filter="url(#softGlow)" />
+  <circle cx="260" cy="230" r="130" fill="#7f00ff" opacity="0.12" filter="url(#softGlow)" />
+  <circle cx="680" cy="240" r="180" fill="#9d50bb" opacity="0.06" filter="url(#softGlow)" />
+
+  <!-- ==================== ICON SQUIRCLE (LEFT) ==================== -->
+  <g transform="translate(100, 100)">
+    <!-- Container Squircle Background -->
+    <rect x="0" y="0" width="280" height="280" rx="64" fill="#11131a" stroke="url(#squircleBorder)" stroke-width="2" />
+    <rect x="4" y="4" width="272" height="272" rx="60" fill="#0b0d14" fill-opacity="0.9" />
+
+    <!-- Outer Refractive Torus Veil (Back Segment) -->
+    <ellipse cx="140" cy="140" rx="110" ry="110" fill="none" stroke="url(#ringGrad)" stroke-width="24" opacity="0.3" transform="rotate(-25 140 140)" filter="url(#softGlow)" />
+
+    <!-- Center Obsidian Crystal Facets -->
+    <g transform="translate(140, 140) scale(1.15)">
+      <!-- Top Apex -->
+      <polygon points="0,-85 -45,-30 0,0" fill="url(#darkFacet)" stroke="#2e3440" stroke-width="1" />
+      <polygon points="0,-85 45,-30 0,0" fill="url(#crystalGrad1)" opacity="0.85" />
+      <polygon points="45,-30 65,15 0,0" fill="url(#crystalGrad2)" opacity="0.9" />
+      <!-- Left Wing -->
+      <polygon points="-45,-30 -65,15 0,0" fill="#151821" stroke="#3b4252" stroke-width="1" />
+      <!-- Bottom Apex -->
+      <polygon points="-65,15 0,85 0,0" fill="url(#crystalGrad2)" opacity="0.95" />
+      <polygon points="65,15 0,85 0,0" fill="url(#crystalGrad1)" opacity="0.9" />
+
+      <!-- Center Inner Luminescent Spike -->
+      <polygon points="0,-60 -18,-10 0,20" fill="#00f2fe" opacity="0.9" filter="url(#softGlow)" />
+      <polygon points="0,-60 18,-10 0,20" fill="#ffffff" opacity="0.95" />
+      <polygon points="0,20 -15,55 0,65" fill="#e100ff" opacity="0.8" />
+      <polygon points="0,20 15,55 0,65" fill="#00f2fe" opacity="0.9" />
+
+      <!-- High-Gloss Refraction Edges -->
+      <line x1="0" y1="-85" x2="0" y2="85" stroke="#ffffff" stroke-width="2" opacity="0.6" filter="url(#softGlow)" />
+      <line x1="-45" y1="-30" x2="45" y2="-30" stroke="#00f2fe" stroke-width="1" opacity="0.5" />
+    </g>
+
+    <!-- Outer Refractive Torus Veil (Front Segment - Dynamic Flow) -->
+    <path d="M 40,180 C 40,80 180,30 230,90 C 270,140 210,230 140,240 C 80,250 30,220 40,180 Z" 
+          fill="none" stroke="url(#ringGrad)" stroke-width="16" stroke-linecap="round" opacity="0.8" filter="url(#softGlow)" />
+    <path d="M 60,160 C 60,90 170,50 210,100" 
+          fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.5" />
+  </g>
+
+  <!-- ==================== TYPOGRAPHY (RIGHT) ==================== -->
+  <g transform="translate(440, 265)">
+    <!-- Neon Glow Outline Text -->
+    <text x="0" y="0" 
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="94" 
+          font-weight="300" 
+          letter-spacing="2"
+          fill="none" 
+          stroke="url(#neonTextGrad)" 
+          stroke-width="5" 
+          stroke-linejoin="round"
+          filter="url(#neonGlow)">Veilshard</text>
+
+    <!-- Inner Core Crisp Text -->
+    <text x="0" y="0" 
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="94" 
+          font-weight="300" 
+          letter-spacing="2"
+          fill="#ffffff" 
+          fill-opacity="0.05"
+          stroke="url(#neonTextGrad)" 
+          stroke-width="2.5" 
+          stroke-linejoin="round">Veilshard</text>
+
+    <!-- Subtitle / Tagline -->
+    <text x="5" y="45" 
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="16" 
+          font-weight="400" 
+          letter-spacing="6" 
+          fill="#8f9bb3" 
+          opacity="0.85">STEALTH MESH · REALITY CORE · ZERO-TRUST</text>
+  </g>
+</svg>

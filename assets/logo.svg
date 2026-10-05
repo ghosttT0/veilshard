@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1017" />
+      <stop offset="100%" stop-color="#050608" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <linearGradient id="squircleBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b4252" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#15171e" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Shard Internal Gradient -->
+    <linearGradient id="crystalGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#7f00ff" stop-opacity="0.9" />
+    </linearGradient>
+    <linearGradient id="crystalGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e100ff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0072ff" stop-opacity="0.8" />
+    </linearGradient>
+    <linearGradient id="darkFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e2230" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0d1017" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Ring Gradient -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.5" />
+      <stop offset="50%" stop-color="#e100ff" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.3" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep Canvas Squircle -->
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#bgGrad)" stroke="url(#squircleBorder)" stroke-width="3" />
+
+  <!-- Ambient Backdrop Glow -->
+  <circle cx="256" cy="256" r="160" fill="#00f2fe" opacity="0.12" filter="url(#softGlow)" />
+  <circle cx="256" cy="256" r="130" fill="#7f00ff" opacity="0.16" filter="url(#softGlow)" />
+
+  <!-- Outer Refractive Torus Veil (Back Segment) -->
+  <ellipse cx="256" cy="256" rx="170" ry="170" fill="none" stroke="url(#ringGrad)" stroke-width="36" opacity="0.35" transform="rotate(-25 256 256)" filter="url(#softGlow)" />
+
+  <!-- Center Obsidian Crystal Facets -->
+  <g transform="translate(256, 256) scale(1.85)">
+    <!-- Top Apex -->
+    <polygon points="0,-85 -45,-30 0,0" fill="url(#darkFacet)" stroke="#2e3440" stroke-width="1" />
+    <polygon points="0,-85 45,-30 0,0" fill="url(#crystalGrad1)" opacity="0.85" />
+    <polygon points="45,-30 65,15 0,0" fill="url(#crystalGrad2)" opacity="0.9" />
+    <!-- Left Wing -->
+    <polygon points="-45,-30 -65,15 0,0" fill="#151821" stroke="#3b4252" stroke-width="1" />
+    <!-- Bottom Apex -->
+    <polygon points="-65,15 0,85 0,0" fill="url(#crystalGrad2)" opacity="0.95" />
+    <polygon points="65,15 0,85 0,0" fill="url(#crystalGrad1)" opacity="0.9" />
+
+    <!-- Center Inner Luminescent Spike -->
+    <polygon points="0,-60 -18,-10 0,20" fill="#00f2fe" opacity="0.9" filter="url(#softGlow)" />
+    <polygon points="0,-60 18,-10 0,20" fill="#ffffff" opacity="0.95" />
+    <polygon points="0,20 -15,55 0,65" fill="#e100ff" opacity="0.8" />
+    <polygon points="0,20 15,55 0,65" fill="#00f2fe" opacity="0.9" />
+
+    <!-- High-Gloss Refraction Edges -->
+    <line x1="0" y1="-85" x2="0" y2="85" stroke="#ffffff" stroke-width="2" opacity="0.6" filter="url(#softGlow)" />
+    <line x1="-45" y1="-30" x2="45" y2="-30" stroke="#00f2fe" stroke-width="1" opacity="0.5" />
+  </g>
+
+  <!-- Outer Refractive Torus Veil (Front Segment - Dynamic Flow) -->
+  <path d="M 120,320 C 110,160 310,70 380,170 C 440,250 350,380 250,400 C 150,410 90,360 120,320 Z" 
+        fill="none" stroke="url(#ringGrad)" stroke-width="26" stroke-linecap="round" opacity="0.85" filter="url(#softGlow)" />
+  <path d="M 150,290 C 140,180 300,100 360,180" 
+        fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" opacity="0.55" />
+</svg>

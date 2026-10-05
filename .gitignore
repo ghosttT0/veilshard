@@ -1,0 +1,29 @@
+# Binaries
+bin/
+veilshard
+vpnctl
+nexus
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage
+*.out
+*.test
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.vsix
+
+# Logs and temporary files
+*.log
+scratch/
+dist/

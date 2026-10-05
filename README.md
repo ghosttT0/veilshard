@@ -1,7 +1,7 @@
 # Veilshard (隐纱之核)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/veilshard/veilshard/main/assets/banner.png" alt="Veilshard Banner" width="700" onerror="this.style.display='none'"/>
+  <img src="./assets/banner.png" alt="Veilshard Banner" width="820" onerror="this.src='./assets/banner.svg'"/>
 </p>
 
 <p align="center">
@@ -12,9 +12,9 @@
 <p align="center">
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Language-Go%201.22%20(Pure%20Stdlib)-00ADD8.svg?style=flat-square" alt="Go 1.22"></a>
   <a href="https://ubuntu.com/"><img src="https://img.shields.io/badge/Platform-Ubuntu%2024.04%20LTS-E95420.svg?style=flat-square" alt="Ubuntu 24.04"></a>
-  <a href="https://github.com/veilshard/veilshard/releases"><img src="https://img.shields.io/badge/Release-v0.2.0-blue.svg?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/ghosttT0/veilshard/releases"><img src="https://img.shields.io/badge/Release-v0.2.0-blue.svg?style=flat-square" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat-square" alt="License: MIT"></a>
-  <a href="https://goreportcard.com/report/github.com/veilshard/veilshard"><img src="https://img.shields.io/badge/Go%20Report-A%2B-brightgreen.svg?style=flat-square" alt="Go Report"></a>
+  <a href="https://github.com/ghosttT0/veilshard"><img src="https://img.shields.io/badge/GitHub-ghosttT0%2Fveilshard-181717.svg?style=flat-square&logo=github" alt="GitHub Repo"></a>
 </p>
 
 ---
