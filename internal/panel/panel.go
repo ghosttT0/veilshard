@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -19,19 +20,20 @@ import (
 	"github.com/veilshard/veilshard/internal/users"
 )
 
-const adminCookie = "vpnctl_panel_key"
+const adminHeader = "X-Admin-Key"
 
 type panelHandler struct {
 	key string
 }
 
-// Mount registers panel routes on the mux.
+// Mount registers panel routes on the mux. The /panel page itself is a fully
+// static asset with zero secrets; every /api route requires the admin key.
 func Mount(mux *http.ServeMux, adminKey string) {
 	if adminKey == "" {
 		return
 	}
 	p := &panelHandler{key: adminKey}
-	mux.HandleFunc("/panel", p.auth(p.page))
+	mux.HandleFunc("/panel", p.page)
 	mux.HandleFunc("/api/users", p.auth(p.apiUsers))
 	mux.HandleFunc("/api/user/add", p.auth(p.apiAdd))
 	mux.HandleFunc("/api/user/remove", p.auth(p.apiRemove))
@@ -41,26 +43,18 @@ func Mount(mux *http.ServeMux, adminKey string) {
 	mux.HandleFunc("/api/user/qr", p.auth(p.apiQR))
 }
 
+// auth accepts the admin key from the X-Admin-Key request header only — never
+// from URLs (which end up in logs) or cookies (CSRF surface). Comparison is
+// constant-time; failures get a jittered delay to blunt brute force.
 func (p *panelHandler) auth(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		given := r.Header.Get("X-Admin-Key")
-		if given == "" {
-			given = r.URL.Query().Get("key")
-		}
-		if given == "" {
-			if c, err := r.Cookie(adminCookie); err == nil {
-				given = c.Value
-			}
-		}
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		given := r.Header.Get(adminHeader)
 		if subtle.ConstantTimeCompare([]byte(given), []byte(p.key)) != 1 {
-			time.Sleep(800 * time.Millisecond)
-			if strings.HasPrefix(r.URL.Path, "/api/") {
-				writeErr(w, http.StatusUnauthorized, "invalid admin key")
-				return
-			}
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(loginPageHTML))
+			time.Sleep(time.Duration(600+time.Now().UnixNano()%500) * time.Millisecond)
+			writeErr(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
 		fn(w, r)
@@ -70,6 +64,8 @@ func (p *panelHandler) auth(fn http.HandlerFunc) http.HandlerFunc {
 func (p *panelHandler) page(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Referrer-Policy", "no-referrer")
 	_, _ = w.Write([]byte(panelHTML))
 }
 
@@ -83,6 +79,8 @@ type userView struct {
 	Used      int64  `json:"used"`
 	Up        int64  `json:"up"`
 	Down      int64  `json:"down"`
+	UpHuman   string `json:"up_human"`
+	DownHuman string `json:"down_human"`
 	SubToken  string `json:"sub_token"`
 	SubURL    string `json:"sub_url"`
 	VlessURI  string `json:"vless_uri"`
@@ -141,6 +139,8 @@ func (p *panelHandler) userViews(r *http.Request) ([]userView, error) {
 			Used:      used,
 			Up:        up,
 			Down:      down,
+			UpHuman:   traffic.Human(up),
+			DownHuman: traffic.Human(down),
 			SubToken:  u.SubToken,
 			SubURL:    subURL,
 			VlessURI:  vless,
@@ -164,7 +164,12 @@ func (p *panelHandler) apiUsers(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeOK(w, map[string]any{"users": views, "now": time.Now().Unix()})
+	writeOK(w, map[string]any{"users": views, "now": time.Now().Unix(), "node_online": nodeOnline()})
+}
+
+// nodeOnline reports whether the proxy core service is running.
+func nodeOnline() bool {
+	return exec.Command("systemctl", "is-active", "--quiet", "vpnctl-proxy").Run() == nil
 }
 
 type mutateReq struct {

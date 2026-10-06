@@ -102,13 +102,14 @@ func runExport(args []string) error {
 		subURL := fmt.Sprintf("http://%s:%d/sub/%s", expCtx.ServerIP, *port, tokenVal)
 		panelURL := fmt.Sprintf("http://%s:%d/panel", expCtx.ServerIP, *port)
 
-		// Admin key for the web panel: persistent in /etc/vpnctl/admin_token.
+		// Admin key for the web panel: 256-bit, persistent in /etc/vpnctl/admin_token.
+		// Shorter legacy keys are rotated automatically on startup.
 		adminKeyVal := ""
 		adminPath := "/etc/vpnctl/admin_token"
-		if data, err := os.ReadFile(adminPath); err == nil && len(strings.TrimSpace(string(data))) >= 16 {
+		if data, err := os.ReadFile(adminPath); err == nil && len(strings.TrimSpace(string(data))) >= 64 {
 			adminKeyVal = strings.TrimSpace(string(data))
 		} else {
-			b := make([]byte, 16)
+			b := make([]byte, 32)
 			_, _ = rand.Read(b)
 			adminKeyVal = hex.EncodeToString(b)
 			_ = os.MkdirAll(filepath.Dir(adminPath), 0755)
@@ -123,7 +124,7 @@ func runExport(args []string) error {
 		_ = exec.Command("iptables", "-I", "INPUT", "-p", "tcp", "--dport", fmt.Sprintf("%d", *port), "-j", "ACCEPT").Run()
 
 		fmt.Printf("\n%sYour Cryptographically Hardened Subscription URL:%s\n%s%s%s\n\n", ColorBold, ColorReset, ColorCyan, subURL, ColorReset)
-		fmt.Printf("%sAdmin Panel:%s %s%s?key=%s%s\n", ColorBold, ColorReset, ColorCyan, panelURL, adminKeyVal, ColorReset)
+		fmt.Printf("%sAdmin Panel:%s %s%s%s (login with the admin key below)\n", ColorBold, ColorReset, ColorCyan, panelURL, ColorReset)
 		fmt.Printf("%sAdmin Key:%s %s%s%s\n\n", ColorBold, ColorReset, ColorYellow, adminKeyVal, ColorReset)
 		fmt.Printf("• %sToken Entropy%s: 256-bit CSPRNG (64-character hex, uncrackable)\n", ColorBold, ColorReset)
 		fmt.Printf("• %sPer-User Links%s: vpnctl user token <name> (each user has an independent subscription)\n", ColorBold, ColorReset)
