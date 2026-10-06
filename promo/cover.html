@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Veilshard 宣传片封面 · 1920×1080</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #14151A; height: 100%; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; font-family: 'Microsoft YaHei', sans-serif; }
+
+  /* 舞台：按窗口缩放显示，导出仍按 1920×1080 原始尺寸 */
+  #stageWrap { transform-origin: center center; }
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: #DFCBBC;
+  }
+
+  /* ---- 平坦色带（呼应「ON THE WAY」构图）---- */
+  .band { position: absolute; left: 0; right: 0; }
+  .band-blue   { top: 0;     height: 400px; background: #2B82AC; }
+  .band-cream  { top: 400px; height: 300px; background: #DFCBBC; }
+  .band-gold   { top: 700px; height: 200px; background: #EDB01D; }
+  .band-clay   { top: 900px; height: 180px; background: #CD6143; }
+
+  /* ---- 数据包航迹（蓝带上的一道虚线弧 + 小胶囊）---- */
+  .sky-art { position: absolute; top: 0; left: 0; }
+
+  /* ---- 水晶（杏仁色带上的"树"）---- */
+  .crystal { position: absolute; left: 400px; top: 396px; }
+  .crystal-shadow { position: absolute; left: 452px; top: 628px; width: 150px; height: 22px;
+    border-radius: 50%; background: #C9B3A2; }
+
+  /* ---- 标题层 ---- */
+  .overline {
+    position: absolute; top: 96px; left: 0; right: 0; text-align: center;
+    font-family: Consolas, 'JetBrains Mono', monospace; font-size: 25px; letter-spacing: 10px;
+    color: rgba(242,234,227,0.8);
+  }
+  .title {
+    position: absolute; top: 128px; left: 0; right: 0; text-align: center;
+    font-family: 'Noto Serif SC', 'Times New Roman', serif; font-weight: 900;
+    font-size: 148px; line-height: 1; letter-spacing: 22px; text-indent: 22px;
+    color: #F2EAE3;
+  }
+  .subtitle {
+    position: absolute; top: 452px; left: 0; right: 0; text-align: center;
+    font-family: 'Noto Serif SC', SimSun, serif; font-weight: 900;
+    font-size: 86px; letter-spacing: 34px; text-indent: 34px; color: #21232A;
+  }
+  .tagline {
+    position: absolute; top: 610px; left: 0; right: 0; text-align: center;
+    font-family: 'Noto Serif SC', SimSun, serif; font-weight: 700;
+    font-size: 40px; letter-spacing: 4px; color: #21232A;
+  }
+  .tagline .dot { color: #CD6143; margin: 0 26px; font-weight: 900; }
+
+  /* ---- 终端命令条 ---- */
+  .term {
+    position: absolute; left: 140px; top: 762px; width: 730px; height: 76px;
+    background: #21232A; border-radius: 8px; display: flex; align-items: center; gap: 14px;
+    padding: 0 28px;
+  }
+  .term .dots { display: flex; gap: 8px; }
+  .term .dots i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .term code {
+    font-family: Consolas, 'JetBrains Mono', monospace; font-size: 27px; color: #F2EAE3;
+    white-space: nowrap;
+  }
+  .term code .p { color: #EDB01D; }
+  .term code .u { color: #DFCBBC; }
+
+  /* ---- 90 秒 徽标（芥末圆贴在赭红带上）---- */
+  .badge90 {
+    position: absolute; left: 1050px; top: 742px; width: 220px; height: 220px; border-radius: 50%;
+    background: #21232A; border: 10px solid #EDB01D; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; transform: rotate(-8deg);
+  }
+  .badge90 b { font-family: 'Noto Serif SC', SimSun, serif; font-size: 74px; font-weight: 900; color: #F2EAE3; line-height: 1; }
+  .badge90 b em { font-style: normal; color: #EDB01D; }
+  .badge90 span { font-family: 'Noto Serif SC', SimSun, serif; font-size: 26px; font-weight: 700; color: #DFCBBC; letter-spacing: 4px; }
+
+  /* ---- 底部信息 ---- */
+  .gh {
+    position: absolute; left: 0; right: 0; top: 972px; text-align: center;
+    font-family: Consolas, 'JetBrains Mono', monospace; font-size: 31px; letter-spacing: 2px;
+    color: #F2EAE3;
+  }
+  .gh .mit { color: rgba(242,234,227,0.75); font-size: 25px; margin-left: 26px; }
+
+  /* ---- 页面 UI（不属于封面，导出时排除）---- */
+  #ui {
+    position: fixed; top: 18px; right: 18px; z-index: 10; display: flex; gap: 10px; align-items: center;
+  }
+  #ui button {
+    background: #2B82AC; color: #fff; border: 0; border-radius: 8px; padding: 10px 18px;
+    font-size: 14px; cursor: pointer; font-family: 'Microsoft YaHei', sans-serif;
+  }
+  #ui button:hover { background: #236A8C; }
+  #ui .hint { color: #8b8f9a; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="stageWrap">
+  <div id="stage">
+    <div class="band band-blue"></div>
+    <div class="band band-cream"></div>
+    <div class="band band-gold"></div>
+    <div class="band band-clay"></div>
+
+    <!-- 蓝带上的数据包航迹（右下角，避开标题） -->
+    <svg class="sky-art" width="1920" height="400" viewBox="0 0 1920 400">
+      <path d="M 1900 262 C 1810 306, 1730 326, 1620 332" fill="none"
+            stroke="#DFCBBC" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.9"/>
+      <path d="M 1900 316 C 1820 342, 1750 352, 1668 356" fill="none"
+            stroke="#DFCBBC" stroke-width="2.5" stroke-dasharray="2 18" stroke-linecap="round" opacity="0.45"/>
+      <!-- 数据包胶囊 -->
+      <g transform="translate(1520 300) rotate(-10)">
+        <rect x="0" y="0" width="86" height="58" rx="29" fill="#EDB01D"/>
+        <rect x="14" y="10" width="26" height="14" rx="7" fill="#F4D98B" transform="rotate(-18 27 17)"/>
+      </g>
+      <g fill="#DFCBBC" opacity="0.85">
+        <rect x="1436" y="344" width="26" height="5" rx="2.5" transform="rotate(-10 1449 346)"/>
+        <rect x="1396" y="356" width="18" height="4" rx="2" transform="rotate(-10 1405 358)"/>
+      </g>
+    </svg>
+
+    <!-- 水晶（杏仁带上的"树"） -->
+    <div class="crystal-shadow"></div>
+    <svg class="crystal" width="230" height="230" viewBox="0 0 100 100">
+      <polygon points="50,4 92,28 92,72 50,96 8,72 8,28" fill="#2B82AC" stroke="#1E5F7A" stroke-width="2.6"/>
+      <polygon points="50,4 92,28 92,72 50,96" fill="#237499" opacity="0.55"/>
+      <polyline points="50,4 50,50 92,28" fill="none" stroke="#DFCBBC" stroke-width="1.8" opacity="0.8"/>
+      <polyline points="50,50 8,72" fill="none" stroke="#DFCBBC" stroke-width="1.6" opacity="0.6"/>
+      <polyline points="50,50 50,96" fill="none" stroke="#DFCBBC" stroke-width="1.6" opacity="0.6"/>
+      <polygon points="50,22 74,36 74,64 50,78 26,64 26,36" fill="none" stroke="#EDB01D" stroke-width="1.6" opacity="0.85"/>
+    </svg>
+
+    <!-- 标题层 -->
+    <div class="overline">OPEN SOURCE · SINGLE BINARY · ZERO DEPENDENCY</div>
+    <div class="title">VEILSHARD</div>
+    <div class="subtitle">隐纱之核</div>
+    <div class="tagline">极简<span class="dot">·</span>高隐匿<span class="dot">·</span>抗审查<span class="dot">·</span>零依赖</div>
+
+    <!-- 终端命令 -->
+    <div class="term">
+      <div class="dots">
+        <i style="background:#CD6143"></i><i style="background:#EDB01D"></i><i style="background:#2B82AC"></i>
+      </div>
+      <code><span class="p">$</span> veilshard apply -f <span class="u">veilshard.yaml</span></code>
+    </div>
+
+    <!-- 90 秒徽标 -->
+    <div class="badge90">
+      <b>90<em>s</em></b>
+      <span>IP 换血</span>
+    </div>
+
+    <!-- 底部仓库地址 -->
+    <div class="gh">github.com/ghosttT0/veilshard<span class="mit">MIT License · v0.2.0 · Ubuntu 24.04 · Go 纯标准库</span></div>
+  </div>
+</div>
+
+<!-- 页面 UI -->
+<div id="ui">
+  <span class="hint">直接截图（Win+Shift+S）或</span>
+  <button id="btnPng">导出 PNG（1920×1080）</button>
+</div>
+
+<script>
+  // 舞台缩放适配窗口
+  function fit() {
+    const s = Math.min(innerWidth / 1920, (innerHeight - 70) / 1080);
+    document.getElementById('stageWrap').style.transform = 'scale(' + s + ')';
+  }
+  addEventListener('resize', fit); fit();
+
+  // 导出 PNG（html2canvas 加载失败时提示用截图）
+  document.getElementById('btnPng').onclick = async () => {
+    const btn = document.getElementById('btnPng');
+    btn.textContent = '导出中…';
+    try {
+      if (typeof html2canvas !== 'function') throw new Error('no lib');
+      const canvas = await html2canvas(document.getElementById('stage'), {
+        width: 1920, height: 1080, scale: 1, backgroundColor: '#DFCBBC', logging: false,
+      });
+      const a = document.createElement('a');
+      a.download = 'veilshard-cover.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      btn.textContent = '导出 PNG（1920×1080）';
+    } catch (e) {
+      btn.textContent = '导出失败，请直接截图';
+      setTimeout(() => { btn.textContent = '导出 PNG（1920×1080）'; }, 2500);
+    }
+  };
+</script>
+</body>
+</html>

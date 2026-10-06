@@ -87,6 +87,15 @@ func (in *Installer) Install(ctx context.Context, opts Options, ui UIProgress) e
 		targetPort = 443
 	}
 
+	// If force reinstalling, stop running proxy & sub services to cleanly free ports
+	if opts.Force {
+		_ = in.service.Stop(ctx)
+		_ = exec.CommandContext(ctx, "systemctl", "stop", "veilshard-sub").Run()
+		_ = exec.CommandContext(ctx, "pkill", "-9", "-f", "xray").Run()
+		_ = exec.CommandContext(ctx, "pkill", "-9", "-f", "veilshard export serve").Run()
+		time.Sleep(500 * time.Millisecond)
+	}
+
 	env, checks, err := preflight.Run(ctx, targetPort)
 	if err != nil {
 		return fmt.Errorf("preflight inspection failed: %w", err)
@@ -322,8 +331,11 @@ func (in *Installer) Install(ctx context.Context, opts Options, ui UIProgress) e
 		ui.Step("Configuration valid", true, "")
 	}
 
-	// Start service
-	err = in.service.Start(ctx)
+	// Start or restart service
+	err = in.service.Restart(ctx)
+	if err != nil {
+		err = in.service.Start(ctx)
+	}
 	if err != nil {
 		logs, _ := in.service.GetLogs(ctx, 25)
 		in.triggerRollback(ctx, ui)

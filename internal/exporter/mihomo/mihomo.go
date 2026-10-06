@@ -5,17 +5,18 @@ import (
 	"strings"
 
 	"github.com/veilshard/veilshard/internal/exporter"
+	"github.com/veilshard/veilshard/internal/fingerprint"
 )
 
 // GenerateYAML produces standard Mihomo / Clash Meta proxy node configuration.
 func GenerateYAML(ctx *exporter.ExportContext, platform ...string) string {
 	var sb strings.Builder
 
+	// Mihomo only accepts known uTLS fingerprints (chrome/firefox/safari/...);
+	// platform labels like "desktop" must never leak into client-fingerprint.
 	fp := "chrome"
-	if len(platform) > 0 && (platform[0] == "ios" || strings.Contains(strings.ToLower(platform[0]), "safari")) {
-		fp = "safari"
-	} else if len(platform) > 0 && platform[0] != "" {
-		fp = platform[0]
+	if len(platform) > 0 && platform[0] != "" {
+		fp = fingerprint.ResolveOptions(platform[0]).ClientFingerprint
 	}
 
 	sb.WriteString("# Mihomo / Clash Meta Proxy Node Configuration\n")

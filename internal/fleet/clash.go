@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/veilshard/veilshard/internal/fingerprint"
 )
 
 // GenerateMultiNodeClashProfile builds a complete multi-node Clash Meta profile with automatic failover groups.
@@ -89,7 +91,9 @@ func GenerateMultiNodeClashProfile(nodes []NodeConfig) string {
 		if platform == "ios" || strings.Contains(strings.ToLower(displayName), "ios") {
 			fp = "safari"
 		} else if platform != "" {
-			fp = platform
+			// Normalize platform labels ("desktop", etc.) to valid uTLS
+			// fingerprints — Mihomo rejects unknown values.
+			fp = fingerprint.ResolveOptions(platform).ClientFingerprint
 		}
 
 		sb.WriteString(fmt.Sprintf("  - name: \"%s\"\n", displayName))
