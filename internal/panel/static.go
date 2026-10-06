@@ -59,6 +59,8 @@ pre{font-size:7px;line-height:1.05;margin-top:8px}.uri{font-family:ui-monospace,
 <div class="card" style="padding:0"><table><thead><tr>
 <th>用户</th><th>状态</th><th>用量 / 配额</th><th>↑</th><th>↓</th><th>到期</th><th>订阅链接</th><th>操作</th>
 </tr></thead><tbody id="tb"></tbody></table></div>
+<div class="card" style="padding:0"><div style="padding:12px 14px;border-bottom:1px solid #1a2130"><b style="font-size:14px">📜 订阅访问日志</b> <span style="color:#7d8590;font-size:12px">最近 100 条 · 含无效令牌探测</span></div>
+<table><thead><tr><th>时间</th><th>用户</th><th>IP</th><th>客户端</th><th>结果</th></tr></thead><tbody id="lb"></tbody></table></div>
 <div id="qrbox" onclick="this.style.display='none'"><div class="box"><b id="qrname"></b><div class="uri" id="qruri"></div><pre id="qrart"></pre></div></div>
 <div id="toast"></div>
 <script>
@@ -114,5 +116,14 @@ document.getElementById('qruri').textContent=d.uri;
 document.getElementById('qrart').textContent=d.qr;
 document.getElementById('qrbox').style.display='flex'})}
 function lg(){fetch('/panel/logout',{method:'POST'}).then(function(){location='/panel'})}
-load();setInterval(load,10000);
+function loadLogs(){fetch('/api/logs',{headers:hdr()}).then(function(r){return r.json()}).then(function(d){
+if(d.error||!d.logs)return;var lb=document.getElementById('lb');lb.innerHTML='';
+d.logs.forEach(function(e){var tr=document.createElement('tr');
+tr.innerHTML='<td style="color:#7d8590">'+new Date(e.at).toLocaleString()+'</td>'
++'<td>'+(e.user==='invalid'?'<span class="badge revoked">无效令牌</span>':esc(e.user))+'</td>'
++'<td class="b">'+esc(e.ip)+'</td>'
++'<td style="color:#7d8590;font-size:12px">'+esc(e.ua)+'</td>'
++'<td>'+(e.status===200?'<span class="badge active">200</span>':'<span class="badge expired">'+e.status+'</span>')+'</td>';
+lb.appendChild(tr)})}).catch(function(){})}
+load();loadLogs();setInterval(load,10000);setInterval(loadLogs,10000);
 </script></body></html>`

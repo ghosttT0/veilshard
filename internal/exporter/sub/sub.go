@@ -11,6 +11,7 @@ import (
 	"github.com/veilshard/veilshard/internal/exporter/uri"
 	"github.com/veilshard/veilshard/internal/fingerprint"
 	"github.com/veilshard/veilshard/internal/panel"
+	"github.com/veilshard/veilshard/internal/sublog"
 	"github.com/veilshard/veilshard/internal/traffic"
 	"github.com/veilshard/veilshard/internal/users"
 )
@@ -105,32 +106,38 @@ func StartSubscriptionServer(addr string, globalToken string, defaultCtx *export
 
 	mux.HandleFunc("/sub/", func(w http.ResponseWriter, r *http.Request) {
 		token := strings.TrimPrefix(r.URL.Path, "/sub/")
+		ip, ua := sublog.ClientIP(r), r.UserAgent()
+		deny := func() {
+			sublog.Record(ip, "invalid", token, ua, http.StatusNotFound)
+			tarpit(w, r)
+		}
 
 		ctx := defaultCtx
 		if token != globalToken {
 			store, err := users.NewStore("")
 			if err != nil {
-				tarpit(w, r)
+				deny()
 				return
 			}
 			u, err := store.FindBySubToken(token)
 			if err != nil || !u.IsActive() {
 				// Unknown or inactive token: same tarpit as any other invalid
 				// path so probes cannot distinguish existing users.
-				tarpit(w, r)
+				deny()
 				return
 			}
 			loaded, err := exporter.LoadExportContext(u.Name)
 			if err != nil {
-				tarpit(w, r)
+				deny()
 				return
 			}
 			ctx = loaded
 		}
 		if ctx == nil {
-			tarpit(w, r)
+			deny()
 			return
 		}
+		sublog.Record(ip, ctx.UserName, token, ua, http.StatusOK)
 
 		userAgent := strings.ToLower(r.UserAgent())
 		platform := "desktop"

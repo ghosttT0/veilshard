@@ -20,6 +20,7 @@ import (
 	"github.com/veilshard/veilshard/internal/exporter/qr"
 	"github.com/veilshard/veilshard/internal/exporter/uri"
 	"github.com/veilshard/veilshard/internal/traffic"
+	"github.com/veilshard/veilshard/internal/sublog"
 	"github.com/veilshard/veilshard/internal/users"
 )
 
@@ -45,6 +46,7 @@ func Mount(mux *http.ServeMux, adminKey string) {
 	mux.HandleFunc("/panel/login", p.login)
 	mux.HandleFunc("/panel/logout", p.logout)
 	mux.HandleFunc("/api/users", p.auth(p.apiUsers))
+	mux.HandleFunc("/api/logs", p.auth(p.apiLogs))
 	mux.HandleFunc("/api/user/add", p.auth(p.apiAdd))
 	mux.HandleFunc("/api/user/remove", p.auth(p.apiRemove))
 	mux.HandleFunc("/api/user/toggle", p.auth(p.apiToggle))
@@ -283,6 +285,11 @@ func (p *panelHandler) apiUsers(w http.ResponseWriter, r *http.Request) {
 // nodeOnline reports whether the proxy core service is running.
 func nodeOnline() bool {
 	return exec.Command("systemctl", "is-active", "--quiet", "vpnctl-proxy").Run() == nil
+}
+
+// apiLogs serves the most recent subscription access events.
+func (p *panelHandler) apiLogs(w http.ResponseWriter, r *http.Request) {
+	writeOK(w, map[string]any{"logs": sublog.Recent(100)})
 }
 
 type mutateReq struct {
