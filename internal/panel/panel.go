@@ -201,6 +201,13 @@ func (p *panelHandler) userViews(r *http.Request) ([]userView, error) {
 	}
 	snap, _ := traffic.Query()
 
+	// Behind Cloudflare Tunnel the request arrives as plain HTTP with
+	// X-Forwarded-Proto=https; subscription links should reflect that.
+	scheme := "http"
+	if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+		scheme = "https"
+	}
+
 	list := store.List()
 	views := make([]userView, 0, len(list))
 	for _, u := range list {
@@ -229,7 +236,7 @@ func (p *panelHandler) userViews(r *http.Request) ([]userView, error) {
 		subURL := ""
 		vless := ""
 		if u.SubToken != "" {
-			subURL = fmt.Sprintf("http://%s/sub/%s", r.Host, u.SubToken)
+			subURL = fmt.Sprintf("%s://%s/sub/%s", scheme, r.Host, u.SubToken)
 			if ctx, err := exporter.LoadExportContext(u.Name); err == nil {
 				vless = uri.GenerateURI(ctx)
 			}
