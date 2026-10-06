@@ -64,11 +64,11 @@ elif [[ -f "./cmd/veilshard/main.go" ]] && command -v go &> /dev/null; then
 else
     # Download latest release from GitHub
     echo -e "Downloading latest veilshard binary..."
-    LATEST_TAG=$(curl -s "https://api.github.com/repos/veilshard/veilshard/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "v0.2.0")
+    LATEST_TAG=$(curl -s "https://api.github.com/repos/ghosttT0/veilshard/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "v0.2.0")
     if [[ -z "$LATEST_TAG" ]]; then
         LATEST_TAG="v0.2.0"
     fi
-    DOWNLOAD_URL="https://github.com/veilshard/veilshard/releases/download/${LATEST_TAG}/veilshard-linux-amd64"
+    DOWNLOAD_URL="https://github.com/ghosttT0/veilshard/releases/download/${LATEST_TAG}/veilshard-linux-amd64"
     echo -e "Fetching ${DOWNLOAD_URL}..."
     if curl -fSL "$DOWNLOAD_URL" -o "$TARGET"; then
         chmod +x "$TARGET"
