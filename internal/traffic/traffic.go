@@ -94,8 +94,8 @@ func BinaryPath() string {
 func parseStatsQuery(out []byte) (*Snapshot, error) {
 	var payload struct {
 		Stat []struct {
-			Name  string `json:"name"`
-			Value string `json:"value"`
+			Name  string      `json:"name"`
+			Value json.Number `json:"value"` // xray emits the counter as a JSON number
 		} `json:"stat"`
 	}
 	if err := json.Unmarshal(out, &payload); err != nil {
@@ -109,9 +109,14 @@ func parseStatsQuery(out []byte) (*Snapshot, error) {
 		if len(parts) != 4 || parts[0] != "user" || parts[2] != "traffic" {
 			continue
 		}
-		val, err := strconv.ParseInt(strings.TrimSpace(st.Value), 10, 64)
+		raw := strings.TrimSpace(st.Value.String())
+		val, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
-			continue
+			f, ferr := strconv.ParseFloat(raw, 64)
+			if ferr != nil {
+				continue
+			}
+			val = int64(f)
 		}
 		name := parts[1]
 		usage := snap.Users[name]
