@@ -124,7 +124,6 @@ veilshard user add alice --expire 30d --quota 100GB
 
 - [docs/architecture.md](docs/architecture.md) — 系统架构
 - [docs/README-v0.2.md](docs/README-v0.2.md) — v0.2 详版手册（品牌/架构/对比表/安全保证）
-- [开发文档.md](开发文档.md) — 开发笔记
 
 ## License
 
