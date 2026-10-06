@@ -13,11 +13,44 @@ import (
 	"github.com/veilshard/veilshard/internal/users"
 )
 
+// APIPort is the loopback-only gRPC stats API port used for per-user traffic metering.
+const APIPort = 15490
+
 // XrayConfig matches Xray JSON configuration schema.
 type XrayConfig struct {
-	Log       LogConfig       `json:"log"`
-	Inbounds  []InboundConfig `json:"inbounds"`
-	Outbounds []OutboundConfig`json:"outbounds"`
+	Log       LogConfig        `json:"log"`
+	Stats     *StatsConfig     `json:"stats,omitempty"`
+	Policy    *PolicyConfig    `json:"policy,omitempty"`
+	API       *APIConfig       `json:"api,omitempty"`
+	Routing   *RoutingConfig   `json:"routing,omitempty"`
+	Inbounds  []InboundConfig  `json:"inbounds"`
+	Outbounds []OutboundConfig `json:"outbounds"`
+}
+
+type StatsConfig struct{}
+
+type PolicyConfig struct {
+	Levels map[string]PolicyLevel `json:"levels"`
+}
+
+type PolicyLevel struct {
+	StatsUserUplink   bool `json:"statsUserUplink"`
+	StatsUserDownlink bool `json:"statsUserDownlink"`
+}
+
+type APIConfig struct {
+	Tag      string   `json:"tag"`
+	Services []string `json:"services"`
+}
+
+type RoutingConfig struct {
+	Rules []RoutingRule `json:"rules"`
+}
+
+type RoutingRule struct {
+	Type        string   `json:"type"`
+	InboundTag  []string `json:"inboundTag"`
+	OutboundTag string   `json:"outboundTag"`
 }
 
 type LogConfig struct {
@@ -27,17 +60,19 @@ type LogConfig struct {
 }
 
 type InboundConfig struct {
-	Port           int                  `json:"port"`
-	Listen         string               `json:"listen,omitempty"`
-	Protocol       string               `json:"protocol"`
-	Settings       InboundSettings      `json:"settings"`
-	StreamSettings InboundStreamSettings`json:"streamSettings"`
-	Sniffing       SniffingConfig       `json:"sniffing"`
+	Port           int                   `json:"port"`
+	Listen         string                `json:"listen,omitempty"`
+	Protocol       string                `json:"protocol"`
+	Tag            string                `json:"tag,omitempty"`
+	Settings       InboundSettings       `json:"settings"`
+	StreamSettings *InboundStreamSettings `json:"streamSettings,omitempty"`
+	Sniffing       *SniffingConfig       `json:"sniffing,omitempty"`
 }
 
 type InboundSettings struct {
-	Clients    []ClientConfig `json:"clients"`
-	Decryption string         `json:"decryption"`
+	Clients    []ClientConfig `json:"clients,omitempty"`
+	Decryption string         `json:"decryption,omitempty"`
+	Address    string         `json:"address,omitempty"` // dokodemo-door follow target
 }
 
 type ClientConfig struct {
@@ -123,6 +158,22 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 			Access:   "",
 			Error:    "",
 		},
+		// Per-user traffic metering: expose StatsService on loopback only.
+		Stats: &StatsConfig{},
+		Policy: &PolicyConfig{
+			Levels: map[string]PolicyLevel{
+				"0": {StatsUserUplink: true, StatsUserDownlink: true},
+			},
+		},
+		API: &APIConfig{
+			Tag:      "api",
+			Services: []string{"StatsService"},
+		},
+		Routing: &RoutingConfig{
+			Rules: []RoutingRule{
+				{Type: "field", InboundTag: []string{"api"}, OutboundTag: "api"},
+			},
+		},
 		Inbounds: []InboundConfig{
 			{
 				Port:     cfg.Server.Port,
@@ -132,7 +183,7 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 					Clients:    clients,
 					Decryption: "none",
 				},
-				StreamSettings: InboundStreamSettings{
+				StreamSettings: &InboundStreamSettings{
 					Network:  "tcp",
 					Security: "reality",
 					RealitySettings: RealitySettings{
@@ -144,9 +195,18 @@ func BuildXrayConfig(cfg *config.Config, userList []*users.User, creds *credenti
 						ShortIds:    shortIDs,
 					},
 				},
-				Sniffing: SniffingConfig{
+				Sniffing: &SniffingConfig{
 					Enabled:      true,
 					DestOverride: []string{"http", "tls", "quic"},
+				},
+			},
+			{
+				Port:     APIPort,
+				Listen:   "127.0.0.1",
+				Protocol: "dokodemo-door",
+				Tag:      "api",
+				Settings: InboundSettings{
+					Address: "127.0.0.1",
 				},
 			},
 		},

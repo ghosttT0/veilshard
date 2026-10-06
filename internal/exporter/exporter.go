@@ -43,6 +43,9 @@ type ExportContext struct {
 	ShortID    string
 	ServerName string
 	NodeName   string
+	SubToken   string     // per-user subscription link token (empty for legacy global)
+	QuotaBytes int64      // 0 = unlimited
+	ExpiresAt  *time.Time // nil = never
 }
 
 // LoadExportContext loads credentials, users, and server details.
@@ -79,9 +82,15 @@ func LoadExportContext(username string) (*ExportContext, error) {
 
 	userUUID := creds.UUID
 	userName := "default"
+	var userSubToken string
+	var userQuota int64
+	var userExpires *time.Time
 	if targetUser != nil {
 		userUUID = targetUser.UUID
 		userName = targetUser.Name
+		userSubToken = targetUser.SubToken
+		userQuota = targetUser.QuotaBytes
+		userExpires = targetUser.ExpiresAt
 	}
 
 	serverIP := cfg.Server.PublicIP
@@ -113,5 +122,8 @@ func LoadExportContext(username string) (*ExportContext, error) {
 		ShortID:    creds.ShortID,
 		ServerName: sni,
 		NodeName:   nodeName,
+		SubToken:   userSubToken,
+		QuotaBytes: userQuota,
+		ExpiresAt:  userExpires,
 	}, nil
 }

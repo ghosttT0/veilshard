@@ -10,6 +10,9 @@ import (
 	"github.com/veilshard/veilshard/internal/exporter"
 	"github.com/veilshard/veilshard/internal/exporter/uri"
 	"github.com/veilshard/veilshard/internal/fingerprint"
+	"github.com/veilshard/veilshard/internal/panel"
+	"github.com/veilshard/veilshard/internal/traffic"
+	"github.com/veilshard/veilshard/internal/users"
 )
 
 // GenerateBase64Subscription generates universal Base64 subscription content
@@ -92,23 +95,55 @@ func GenerateFullClashProfile(ctx *exporter.ExportContext, platform ...string) s
 	return sb.String()
 }
 
-// StartSubscriptionServer serves universal subscription requests over HTTP.
-// Automatically serves Clash YAML for Clash clients and Base64 for Shadowrocket/v2rayN!
-func StartSubscriptionServer(addr string, token string, ctx *exporter.ExportContext) error {
+// StartSubscriptionServer serves per-user universal subscription requests over
+// HTTP and mounts the admin panel on the same port. Clash clients receive the
+// full YAML profile, everything else gets Base64 for Shadowrocket/v2rayN.
+// The legacy global token resolves to the default user; every user also gets
+// an individual token from the user store.
+func StartSubscriptionServer(addr string, globalToken string, defaultCtx *exporter.ExportContext, adminKey string) error {
 	mux := http.NewServeMux()
 
-	path := fmt.Sprintf("/sub/%s", token)
-	handler := func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/sub/", func(w http.ResponseWriter, r *http.Request) {
+		token := strings.TrimPrefix(r.URL.Path, "/sub/")
+
+		ctx := defaultCtx
+		if token != globalToken {
+			store, err := users.NewStore("")
+			if err != nil {
+				tarpit(w, r)
+				return
+			}
+			u, err := store.FindBySubToken(token)
+			if err != nil || !u.IsActive() {
+				// Unknown or inactive token: same tarpit as any other invalid
+				// path so probes cannot distinguish existing users.
+				tarpit(w, r)
+				return
+			}
+			loaded, err := exporter.LoadExportContext(u.Name)
+			if err != nil {
+				tarpit(w, r)
+				return
+			}
+			ctx = loaded
+		}
+		if ctx == nil {
+			tarpit(w, r)
+			return
+		}
+
 		userAgent := strings.ToLower(r.UserAgent())
 		platform := "desktop"
 		if strings.Contains(userAgent, "iphone") || strings.Contains(userAgent, "ipad") || strings.Contains(userAgent, "shadowrocket") {
 			platform = "ios"
 		}
 
+		userinfo := UserInfoHeader(ctx)
+
 		// If requester is Clash / Mihomo / ClashVerge or requests YAML
 		if strings.Contains(userAgent, "clash") || strings.Contains(userAgent, "mihomo") || r.URL.Query().Get("type") == "clash" || strings.HasSuffix(r.URL.Path, ".yaml") || strings.HasSuffix(r.URL.Path, "/clash") {
 			w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
-			w.Header().Set("Subscription-Userinfo", "upload=0; download=0; total=107374182400; expire=0")
+			w.Header().Set("Subscription-Userinfo", userinfo)
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(GenerateFullClashProfile(ctx, platform)))
 			return
@@ -116,21 +151,39 @@ func StartSubscriptionServer(addr string, token string, ctx *exporter.ExportCont
 
 		// Otherwise, serve universal Base64 string for Shadowrocket, v2rayN, etc.
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Subscription-Userinfo", "upload=0; download=0; total=107374182400; expire=0")
+		w.Header().Set("Subscription-Userinfo", userinfo)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(GenerateBase64Subscription(ctx)))
-	}
+	})
 
-	mux.HandleFunc(path, handler)
-	mux.HandleFunc(path+"/clash.yaml", handler)
-	mux.HandleFunc(path+"/clash", handler)
+	panel.Mount(mux, adminKey)
 
 	// Anti-probing tarpit for any unauthorized / invalid paths:
 	// Slow down brute-force scanners by delaying response by 3 seconds
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(3 * time.Second)
-		http.NotFound(w, r)
+		tarpit(w, r)
 	})
 
 	return http.ListenAndServe(addr, mux)
+}
+
+func tarpit(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(3 * time.Second)
+	http.NotFound(w, r)
+}
+
+// UserInfoHeader builds the Subscription-Userinfo header from live per-user
+// counters and the user's quota/expiry. Clash renders it as the traffic bar.
+func UserInfoHeader(ctx *exporter.ExportContext) string {
+	upload, download := int64(0), int64(0)
+	if snap, err := traffic.Query(); err == nil {
+		if usage, ok := traffic.ForUser(snap, ctx.UserName); ok {
+			upload, download = usage.Up, usage.Down
+		}
+	}
+	var expire int64
+	if ctx.ExpiresAt != nil {
+		expire = ctx.ExpiresAt.Unix()
+	}
+	return fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", upload, download, ctx.QuotaBytes, expire)
 }

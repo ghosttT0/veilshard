@@ -1,6 +1,8 @@
 package users
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,13 +25,15 @@ var (
 )
 
 type User struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	UUID      string     `json:"uuid"`
-	Enabled   bool       `json:"enabled"`
-	CreatedAt time.Time  `json:"created_at"`
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
-	IsRevoked bool       `json:"is_revoked,omitempty"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	UUID       string     `json:"uuid"`
+	Enabled    bool       `json:"enabled"`
+	CreatedAt  time.Time  `json:"created_at"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	IsRevoked  bool       `json:"is_revoked,omitempty"`
+	SubToken   string     `json:"sub_token,omitempty"`    // per-user subscription link secret
+	QuotaBytes int64      `json:"quota_bytes,omitempty"`  // 0 = unlimited
 }
 
 func (u *User) IsActive() bool {
@@ -61,7 +65,34 @@ func NewStore(path string) (*Store, error) {
 		return nil, err
 	}
 
+	// Backfill per-user subscription tokens for pre-multiuser stores.
+	migrated := false
+	for _, u := range s.users {
+		if u.SubToken == "" {
+			tok, err := newSecretToken()
+			if err != nil {
+				return nil, err
+			}
+			u.SubToken = tok
+			migrated = true
+		}
+	}
+	if migrated {
+		if err := s.Save(); err != nil {
+			return nil, err
+		}
+	}
+
 	return s, nil
+}
+
+// newSecretToken generates a 128-bit CSPRNG hex token for subscription links.
+func newSecretToken() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("generate sub token: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func (s *Store) load() error {
@@ -158,12 +189,17 @@ func (s *Store) AddWithExpiry(name string, customUUID string, duration time.Dura
 	}
 
 	id, _ := credentials.NewShortID(8)
+	tok, err := newSecretToken()
+	if err != nil {
+		return nil, err
+	}
 	user := &User{
 		ID:        id,
 		Name:      name,
 		UUID:      uUUID,
 		Enabled:   true,
 		CreatedAt: time.Now().UTC(),
+		SubToken:  tok,
 	}
 
 	if duration > 0 {
@@ -220,5 +256,48 @@ func (s *Store) SetEnabled(nameOrID string, enabled bool) (*User, error) {
 		return nil, err
 	}
 
+	return u, nil
+}
+
+// FindBySubToken resolves a subscription link token to its owner.
+func (s *Store) FindBySubToken(token string) (*User, error) {
+	if token == "" {
+		return nil, ErrUserNotFound
+	}
+	for _, u := range s.users {
+		if u.SubToken == token {
+			return u, nil
+		}
+	}
+	return nil, ErrUserNotFound
+}
+
+// SetQuotaBytes stores the per-user traffic quota (0 = unlimited).
+func (s *Store) SetQuotaBytes(nameOrID string, quota int64) (*User, error) {
+	u, err := s.Get(nameOrID)
+	if err != nil {
+		return nil, err
+	}
+	u.QuotaBytes = quota
+	if err := s.Save(); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// ResetSubToken rotates a user's subscription link secret.
+func (s *Store) ResetSubToken(nameOrID string) (*User, error) {
+	u, err := s.Get(nameOrID)
+	if err != nil {
+		return nil, err
+	}
+	tok, err := newSecretToken()
+	if err != nil {
+		return nil, err
+	}
+	u.SubToken = tok
+	if err := s.Save(); err != nil {
+		return nil, err
+	}
 	return u, nil
 }

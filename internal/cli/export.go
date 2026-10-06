@@ -100,6 +100,21 @@ func runExport(args []string) error {
 		}
 
 		subURL := fmt.Sprintf("http://%s:%d/sub/%s", expCtx.ServerIP, *port, tokenVal)
+		panelURL := fmt.Sprintf("http://%s:%d/panel", expCtx.ServerIP, *port)
+
+		// Admin key for the web panel: persistent in /etc/vpnctl/admin_token.
+		adminKeyVal := ""
+		adminPath := "/etc/vpnctl/admin_token"
+		if data, err := os.ReadFile(adminPath); err == nil && len(strings.TrimSpace(string(data))) >= 16 {
+			adminKeyVal = strings.TrimSpace(string(data))
+		} else {
+			b := make([]byte, 16)
+			_, _ = rand.Read(b)
+			adminKeyVal = hex.EncodeToString(b)
+			_ = os.MkdirAll(filepath.Dir(adminPath), 0755)
+			_ = os.WriteFile(adminPath, []byte(adminKeyVal), 0600)
+		}
+
 		ui.Header("veilshard Subscription Server")
 		ui.Success("Subscription server running with 256-bit anti-bruteforce encryption!")
 
@@ -108,14 +123,17 @@ func runExport(args []string) error {
 		_ = exec.Command("iptables", "-I", "INPUT", "-p", "tcp", "--dport", fmt.Sprintf("%d", *port), "-j", "ACCEPT").Run()
 
 		fmt.Printf("\n%sYour Cryptographically Hardened Subscription URL:%s\n%s%s%s\n\n", ColorBold, ColorReset, ColorCyan, subURL, ColorReset)
+		fmt.Printf("%sAdmin Panel:%s %s%s?key=%s%s\n", ColorBold, ColorReset, ColorCyan, panelURL, adminKeyVal, ColorReset)
+		fmt.Printf("%sAdmin Key:%s %s%s%s\n\n", ColorBold, ColorReset, ColorYellow, adminKeyVal, ColorReset)
 		fmt.Printf("• %sToken Entropy%s: 256-bit CSPRNG (64-character hex, uncrackable)\n", ColorBold, ColorReset)
+		fmt.Printf("• %sPer-User Links%s: vpnctl user token <name> (each user has an independent subscription)\n", ColorBold, ColorReset)
 		fmt.Printf("• %sAnti-Scraping Tarpit%s: Active (random probes encounter 3s penalty delay)\n", ColorBold, ColorReset)
 		fmt.Printf("• %sClash / Mihomo / Clash Verge%s: Automatically receives complete YAML config with routing rules\n", ColorBold, ColorReset)
 		fmt.Printf("• %sShadowrocket / v2rayN / sing-box%s: Automatically receives Base64 node list\n\n", ColorBold, ColorReset)
 		fmt.Printf("Press Ctrl+C to stop.\n\n")
 
 		addr := fmt.Sprintf("0.0.0.0:%d", *port)
-		return sub.StartSubscriptionServer(addr, tokenVal, expCtx)
+		return sub.StartSubscriptionServer(addr, tokenVal, expCtx, adminKeyVal)
 
 	default:
 		ui.Header("vpnctl export")

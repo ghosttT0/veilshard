@@ -81,7 +81,7 @@ func printGlobalHelp() {
 	fmt.Printf("  %sstatus%s         Display service, core, firewall, and connection statistics\n", ColorCyan, ColorReset)
 	fmt.Printf("  %sdoctor%s         Run comprehensive diagnostic checks across system, network, and security\n", ColorCyan, ColorReset)
 	fmt.Printf("  %sexport%s         Generate client configuration (Mihomo/Clash YAML, share URI, QR)\n", ColorCyan, ColorReset)
-	fmt.Printf("  %suser%s           Manage proxy users (list, add, remove, enable, disable, revoke)\n", ColorCyan, ColorReset)
+	fmt.Printf("  %suser%s           Manage proxy users (list, add, token, quota, traffic, remove, enable, disable, revoke)\n", ColorCyan, ColorReset)
 	fmt.Printf("  %supdate%s         Update proxy core with automatic rollback verification\n", ColorCyan, ColorReset)
 	fmt.Printf("  %sconfig%s         Inspect current veilshard configuration\n", ColorCyan, ColorReset)
 	fmt.Printf("  %sprobe%s          Benchmark & detect optimal low-latency TLS 1.3 / H2 SNI targets\n", ColorCyan, ColorReset)
