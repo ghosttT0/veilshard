@@ -4,12 +4,15 @@
 package panel
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/veilshard/veilshard/internal/coresync"
@@ -20,20 +23,27 @@ import (
 	"github.com/veilshard/veilshard/internal/users"
 )
 
-const adminHeader = "X-Admin-Key"
+const (
+	adminHeader   = "X-Admin-Key"
+	sessionCookie = "vpnctl_session"
+	sessionTTL    = 24 * time.Hour
+)
 
 type panelHandler struct {
-	key string
+	key      string
+	sessions sync.Map // session token -> unix expiry
 }
 
-// Mount registers panel routes on the mux. The /panel page itself is a fully
-// static asset with zero secrets; every /api route requires the admin key.
+// Mount registers panel routes. Unauthenticated /panel requests receive
+// nothing but a bare login form — no page markup, no data, no endpoints.
 func Mount(mux *http.ServeMux, adminKey string) {
 	if adminKey == "" {
 		return
 	}
 	p := &panelHandler{key: adminKey}
 	mux.HandleFunc("/panel", p.page)
+	mux.HandleFunc("/panel/login", p.login)
+	mux.HandleFunc("/panel/logout", p.logout)
 	mux.HandleFunc("/api/users", p.auth(p.apiUsers))
 	mux.HandleFunc("/api/user/add", p.auth(p.apiAdd))
 	mux.HandleFunc("/api/user/remove", p.auth(p.apiRemove))
@@ -43,16 +53,64 @@ func Mount(mux *http.ServeMux, adminKey string) {
 	mux.HandleFunc("/api/user/qr", p.auth(p.apiQR))
 }
 
-// auth accepts the admin key from the X-Admin-Key request header only — never
-// from URLs (which end up in logs) or cookies (CSRF surface). Comparison is
-// constant-time; failures get a jittered delay to blunt brute force.
+func secureHeaders(w http.ResponseWriter) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+}
+
+// newSession mints a 256-bit session token with a sliding server-side expiry.
+func (p *panelHandler) newSession() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	tok := hex.EncodeToString(b)
+	p.sessions.Store(tok, time.Now().Add(sessionTTL).Unix())
+	return tok, nil
+}
+
+func (p *panelHandler) validSession(tok string) bool {
+	if tok == "" {
+		return false
+	}
+	v, ok := p.sessions.Load(tok)
+	if !ok {
+		return false
+	}
+	if time.Now().Unix() > v.(int64) {
+		p.sessions.Delete(tok)
+		return false
+	}
+	return true
+}
+
+// authorized accepts either the admin key (X-Admin-Key, for CLI use) or a
+// valid server-side session cookie (browser flow).
+func (p *panelHandler) authorized(r *http.Request) bool {
+	if k := r.Header.Get(adminHeader); k != "" && subtle.ConstantTimeCompare([]byte(k), []byte(p.key)) == 1 {
+		return true
+	}
+	if c, err := r.Cookie(sessionCookie); err == nil && p.validSession(c.Value) {
+		return true
+	}
+	return false
+}
+
+// auth guards the JSON API: authorized requests pass, everything else gets a
+// jittered-delay 401 that reveals nothing.
 func (p *panelHandler) auth(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Referrer-Policy", "no-referrer")
-		given := r.Header.Get(adminHeader)
-		if subtle.ConstantTimeCompare([]byte(given), []byte(p.key)) != 1 {
+		secureHeaders(w)
+		// Mutations must speak JSON: cross-site form posts cannot set this
+		// content type, which layers CSRF protection on top of SameSite.
+		if r.Method == http.MethodPost && !strings.HasPrefix(r.URL.Path, "/api/user/qr") {
+			if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+				writeErr(w, http.StatusUnsupportedMediaType, "unsupported media type")
+				return
+			}
+		}
+		if !p.authorized(r) {
 			time.Sleep(time.Duration(600+time.Now().UnixNano()%500) * time.Millisecond)
 			writeErr(w, http.StatusUnauthorized, "unauthorized")
 			return
@@ -61,12 +119,60 @@ func (p *panelHandler) auth(fn http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// page serves the admin console only to authenticated sessions; everyone else
+// gets a bare login form and nothing else.
 func (p *panelHandler) page(w http.ResponseWriter, r *http.Request) {
+	secureHeaders(w)
+	if !p.authorized(r) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(loginPageHTML))
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Referrer-Policy", "no-referrer")
 	_, _ = w.Write([]byte(panelHTML))
+}
+
+// login validates the form-posted admin key and starts a server-side session.
+// The key travels only in the POST body — never in any URL.
+func (p *panelHandler) login(w http.ResponseWriter, r *http.Request) {
+	secureHeaders(w)
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/panel", http.StatusSeeOther)
+		return
+	}
+	key := r.FormValue("key")
+	if subtle.ConstantTimeCompare([]byte(key), []byte(p.key)) != 1 {
+		time.Sleep(time.Duration(600+time.Now().UnixNano()%500) * time.Millisecond)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(loginPageHTML))
+		return
+	}
+	tok, err := p.newSession()
+	if err != nil {
+		http.Error(w, "session error", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookie,
+		Value:    tok,
+		Path:     "/",
+		MaxAge:   int(sessionTTL.Seconds()),
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+	http.Redirect(w, r, "/panel", http.StatusSeeOther)
+}
+
+// logout invalidates the session immediately.
+func (p *panelHandler) logout(w http.ResponseWriter, r *http.Request) {
+	secureHeaders(w)
+	if c, err := r.Cookie(sessionCookie); err == nil {
+		p.sessions.Delete(c.Value)
+	}
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	http.Redirect(w, r, "/panel", http.StatusSeeOther)
 }
 
 type userView struct {

@@ -1,9 +1,22 @@
 package panel
 
-// panelHTML is a fully static single page: no server-side secrets, no
-// comments, no inline auth. The admin key lives in sessionStorage and every
-// API call carries it in the X-Admin-Key header. Unauthorized fetches get 401
-// and the login overlay appears.
+// loginPageHTML is the ONLY thing unauthenticated visitors receive: a bare
+// password form, no panel markup, no comments, no identifying data.
+const loginPageHTML = `<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>·</title>
+<style>body{background:#0a0e14;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:system-ui}
+.f{background:#11161f;border:1px solid #2a3344;border-radius:12px;padding:30px;width:min(400px,92vw)}
+h2{color:#c9d1d9;font-size:15px;margin:0 0 4px;font-weight:600}p{color:#7d8590;font-size:12px;margin:0 0 14px}
+input{width:100%;box-sizing:border-box;background:#0d1117;color:#c9d1d9;border:1px solid #2a3344;border-radius:6px;padding:10px;font-size:13px;font-family:ui-monospace,monospace;margin-bottom:12px}
+button{width:100%;background:#238636;color:#fff;border:0;border-radius:6px;padding:10px;font-size:14px;cursor:pointer}
+</style></head><body><div class="f"><h2>🔒 管理员登录</h2><p>输入管理密钥继续</p>
+<form method="POST" action="/panel/login"><input type="password" name="key" autocomplete="off" autofocus required><button type="submit">解锁</button></form>
+</div></body></html>`
+
+// panelHTML is the admin console, served only to authenticated sessions.
+// Session state rides an HttpOnly SameSite=Strict cookie; the page itself
+// holds no secrets and carries no comments.
 const panelHTML = `<!DOCTYPE html>
 <html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer"><title>P</title>
@@ -11,10 +24,9 @@ const panelHTML = `<!DOCTYPE html>
 *{box-sizing:border-box;margin:0;padding:0}body{background:#0a0e14;color:#c9d1d9;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:22px;min-height:100vh}
 h1{font-size:19px;letter-spacing:.5px}#meta{color:#7d8590;font-size:12px;margin:6px 0 16px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.card{background:#11161f;border:1px solid #1f2733;border-radius:10px;padding:14px 16px}
+.card{background:#11161f;border:1px solid #1f2733;border-radius:10px;padding:14px 16px;overflow-x:auto}
 .card .v{font-size:22px;font-weight:700;margin-top:4px}.card .l{font-size:12px;color:#7d8590}
 .g{color:#3fb950}.y{color:#d29922}.r{color:#f85149}.b{color:#58a6ff}
-.card{background:#11161f;border:1px solid #1f2733;border-radius:10px;padding:14px 16px;overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13px;min-width:900px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #1a2130;white-space:nowrap}
 th{color:#7d8590;font-weight:600;font-size:12px}
@@ -31,17 +43,12 @@ input{background:#0d1117;color:#c9d1d9;border:1px solid #2a3344;border-radius:6p
 label{font-size:12px;color:#7d8590;margin-right:4px}
 #toast{position:fixed;bottom:20px;right:20px;background:#238636;color:#fff;padding:10px 16px;border-radius:8px;display:none;font-size:13px;z-index:9}
 #toast.e{background:#b62324}
-#login{position:fixed;inset:0;background:rgba(4,7,12,.92);display:flex;justify-content:center;align-items:center;z-index:8}
-#login .box{background:#11161f;border:1px solid #2a3344;border-radius:12px;padding:30px;width:min(420px,92vw)}
-#login h2{font-size:16px;margin-bottom:6px}#login p{font-size:12px;color:#7d8590;margin-bottom:14px}
-#login input{width:100%;font-family:ui-monospace,monospace;margin:8px 0 12px}
-#login button{width:100%;padding:9px;margin:0}
 #qrbox{position:fixed;inset:0;background:rgba(4,7,12,.85);display:none;justify-content:center;align-items:center;z-index:8}
 #qrbox .box{background:#11161f;border:1px solid #2a3344;border-radius:12px;padding:20px;max-width:92vw;overflow:auto}
 pre{font-size:7px;line-height:1.05;margin-top:8px}.uri{font-family:ui-monospace,monospace;font-size:11px;color:#7d8590;word-break:break-all;user-select:all;margin-top:6px}
 #logout{float:right}
 </style></head><body>
-<button id="logout" onclick="logout()">退出</button>
+<button id="logout" onclick="lg()">退出</button>
 <h1>◈ Node Panel</h1><div id="meta">—</div>
 <div class="cards" id="cards"></div>
 <div class="card"><b style="font-size:14px">添加用户</b><br><br>
@@ -53,23 +60,20 @@ pre{font-size:7px;line-height:1.05;margin-top:8px}.uri{font-family:ui-monospace,
 <th>用户</th><th>状态</th><th>用量 / 配额</th><th>↑</th><th>↓</th><th>到期</th><th>订阅链接</th><th>操作</th>
 </tr></thead><tbody id="tb"></tbody></table></div>
 <div id="qrbox" onclick="this.style.display='none'"><div class="box"><b id="qrname"></b><div class="uri" id="qruri"></div><pre id="qrart"></pre></div></div>
-<div id="login" style="display:none"><div class="box"><h2>🔒 管理员登录</h2><p>输入 256 位管理密钥（仅存于本页会话，不写入 URL 与 Cookie）</p>
-<input id="kin" type="password" autofocus><button class="primary" onclick="tryKey()">解锁面板</button></div></div>
 <div id="toast"></div>
 <script>
-var KEY=sessionStorage.getItem('k')||'';
-function hdr(){var h={'Content-Type':'application/json'};if(KEY)h['X-Admin-Key']=KEY;return h}
+function hdr(){return{'Content-Type':'application/json'}}
 function toast(m,e){var t=document.getElementById('toast');t.textContent=m;t.className=e?'e':'';t.style.display='block';setTimeout(function(){t.style.display='none'},2800)}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function fmtT(u){if(!u)return'永久';var r=u-Date.now()/1e3;if(r<0)return'<span class="badge expired">已过期</span>';
 return new Date(u*1e3).toLocaleDateString()+' <span style="color:#7d8590">('+Math.floor(r/86400)+'天)</span>'}
-function bar(u,q){if(q<=0)return'<span class="bar"><i style="width:'+Math.min(100,(u>0?3:0))+'%;background:#58a6ff"></i></span>不限';
+function bar(u,q){if(q<=0)return'<span class="bar"><i style="width:'+(u>0?3:0)+'%;background:#58a6ff"></i></span>不限';
 var p=Math.min(100,u/q*100),c=p<70?'#3fb950':(p<90?'#d29922':'#f85149');
 return'<span class="bar"><i style="width:'+p+'%;background:'+c+'"></i></span>'+p.toFixed(0)+'%'}
+function fmtBytes(b){if(b<1024)return b+' B';var u=['KB','MB','GB','TB'],i=-1;do{b/=1024;i++}while(b>=1024&&i<3);return b.toFixed(2)+' '+u[i]}
 function load(){fetch('/api/users',{headers:hdr()}).then(function(r){
-if(r.status===401){showLogin();throw'auth'}return r.json()}).then(function(d){
+if(r.status===401){location.reload();throw'auth'}return r.json()}).then(function(d){
 if(d.error){toast(d.error,1);return}
-sessionStorage.setItem('k',KEY);document.getElementById('login').style.display='none';
 var nu=0,used=0;d.users.forEach(function(u){if(u.status==='active')nu++;used+=u.used});
 document.getElementById('meta').textContent=d.users.length+' 用户 · '+new Date(d.now*1e3).toLocaleTimeString()+' 更新 · 10s 自动刷新';
 document.getElementById('cards').innerHTML=
@@ -91,9 +95,9 @@ tr.innerHTML='<td><b>'+esc(u.name)+'</b></td>'
 +(u.status==='disabled'?'<button onclick="tg(\''+esc(u.name)+'\',true)">启用</button>':'<button onclick="tg(\''+esc(u.name)+'\',false)">停用</button>')
 +'<button class="danger" onclick="del(\''+esc(u.name)+'\')">删除</button></td>';
 tb.appendChild(tr)})}).catch(function(e){if(e!=='auth')toast('加载失败',1)})}
-function fmtBytes(b){if(b<1024)return b+' B';var u=['KB','MB','GB','TB'],i=-1;do{b/=1024;i++}while(b>=1024&&i<3);return b.toFixed(2)+' '+u[i]}
-function post(p,b,ok){fetch(p,{method:'POST',headers:hdr(),body:JSON.stringify(b)}).then(function(r){return r.json()}).then(function(d){
-if(d.error){toast('❌ '+d.error,1)}else{toast(ok);load()}}).catch(function(){toast('请求失败',1)})}
+function post(p,b,ok){fetch(p,{method:'POST',headers:hdr(),body:JSON.stringify(b)}).then(function(r){
+if(r.status===401){location.reload();throw'auth'}return r.json()}).then(function(d){
+if(d.error){toast('❌ '+d.error,1)}else{toast(ok);load()}}).catch(function(e){if(e!=='auth')toast('请求失败',1)})}
 document.getElementById('addf').onsubmit=function(e){e.preventDefault();
 post('/api/user/add',{name:document.getElementById('f-name').value.trim(),quota_gb:parseFloat(document.getElementById('f-quota').value)||0,days:parseInt(document.getElementById('f-days').value)||0},'✅ 已创建并下发到节点');
 this.reset();return false};
@@ -109,9 +113,6 @@ document.getElementById('qrname').textContent='📱 '+n;
 document.getElementById('qruri').textContent=d.uri;
 document.getElementById('qrart').textContent=d.qr;
 document.getElementById('qrbox').style.display='flex'})}
-function showLogin(){document.getElementById('login').style.display='flex';KEY='';sessionStorage.removeItem('k')}
-function tryKey(){KEY=document.getElementById('kin').value.trim();if(KEY)load()}
-function logout(){sessionStorage.removeItem('k');location.reload()}
-document.getElementById('kin').onkeydown=function(e){if(e.key==='Enter')tryKey()};
+function lg(){fetch('/panel/logout',{method:'POST'}).then(function(){location='/panel'})}
 load();setInterval(load,10000);
 </script></body></html>`
